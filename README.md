@@ -119,7 +119,158 @@ mmcv-{version}+cu{cuda_version}torch{torch_version}cxx11abi{abi}-{platform}.whl
 
 ## 使用方法
 
-### 触发构建
+### 快速安装指南
+
+#### 第一步：检查您的环境
+
+在安装前，请先确认您的环境配置：
+
+```bash
+# 查看 Python 版本
+python --version
+# 输出示例：Python 3.12.0
+
+# 查看 PyTorch 和 CUDA 版本
+python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.version.cuda}')"
+# 输出示例：
+# PyTorch: 2.6.0+cu126
+# CUDA: 12.6
+
+# 查看 C++11 ABI 设置（如果已安装 PyTorch）
+python -c "import torch; print(f'C++11 ABI: {torch._C._GLIBCXX_USE_CXX11_ABI}')"
+# 输出示例：C++11 ABI: False
+```
+
+#### 第二步：选择正确的 Wheel 文件
+
+访问 [Releases 页面](https://github.com/biubushy/mmcv-wheels/releases)，根据您的环境选择对应的 wheel 文件。
+
+**Wheel 文件命名规则**：
+```
+mmcv-{版本号}+cu{CUDA版本}torch{PyTorch版本}cxx11abi{ABI设置}-cp{Python版本}-cp{Python版本}-linux_x86_64.whl
+```
+
+**示例文件名解析**：
+```
+mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+│         │  │  │         │            │    │
+│         │  │  │         │            │    └─ Python 3.12
+│         │  │  │         │            └────── Python 3.12
+│         │  │  │         └─────────────────── C++11 ABI 禁用
+│         │  │  └───────────────────────────── PyTorch 2.6.0
+│         │  └──────────────────────────────── CUDA 12.x
+│         └─────────────────────────────────── MMCV 版本 2.1.0
+└───────────────────────────────────────────── 包名
+```
+
+**选择标准**：
+
+1. **Python 版本匹配**
+   - `cp39` → Python 3.9
+   - `cp310` → Python 3.10
+   - `cp311` → Python 3.11
+   - `cp312` → Python 3.12
+
+2. **CUDA 版本匹配**
+   - 如果您的 CUDA 是 11.x（11.0-11.8），选择 `cu11` 开头的文件
+   - 如果您的 CUDA 是 12.x（12.0-12.9），选择 `cu12` 开头的文件
+   - **提示**：PyTorch 的 CUDA 版本（如 `cu126`）中的数字对应 CUDA 12.6
+
+3. **PyTorch 版本匹配**
+   - 选择与您安装的 PyTorch **主版本和次版本**相同的文件
+   - 例如：PyTorch 2.6.0、2.6.1 都选择 `torch2.6.0` 的文件
+   - 支持的版本：2.4.0、2.5.1、2.6.0、2.7.1
+
+4. **C++11 ABI 匹配**
+   - **绝大多数情况**：选择 `cxx11abiFALSE`（适用于通过 pip 安装的标准 PyTorch）
+   - **特殊情况**：仅在以下情况选择 `cxx11abiTRUE`
+     - 使用 NVIDIA NGC PyTorch 容器
+     - 从源码编译的 PyTorch，且编译时启用了 C++11 ABI
+   - **如何验证**：运行上面的检查命令，如果输出 `False`，选择 `cxx11abiFALSE`
+
+#### 第三步：下载并安装
+
+**完整示例（环境：Python 3.12 + PyTorch 2.6.0 + CUDA 12.6）**：
+
+```bash
+# 1. 下载 wheel 文件
+wget https://github.com/biubushy/mmcv-wheels/releases/download/v2.1.0/mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+
+# 2. 安装（使用完整文件名）
+pip install mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+
+# 3. 验证安装
+python -c "import mmcv; print(mmcv.__version__)"
+```
+
+**或者直接使用 URL 安装**：
+
+```bash
+pip install https://github.com/biubushy/mmcv-wheels/releases/download/v2.1.0/mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+```
+
+### 常见环境配置示例
+
+#### 示例 1：标准 PyTorch 环境
+```bash
+# 环境信息
+Python 3.11.0
+PyTorch 2.5.1+cu118 (通过 pip 安装)
+CUDA 11.8
+
+# 选择的 wheel
+mmcv-2.1.0+cu11torch2.5.1cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
+```
+
+#### 示例 2：新版 CUDA 环境
+```bash
+# 环境信息
+Python 3.12.0
+PyTorch 2.7.1+cu128 (通过 pip 安装)
+CUDA 12.8
+
+# 选择的 wheel
+mmcv-2.1.0+cu12torch2.7.1cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+```
+
+#### 示例 3：NVIDIA NGC 容器
+```bash
+# 环境信息
+Docker 容器：nvcr.io/nvidia/pytorch:24.10-py3
+Python 3.10（容器内）
+PyTorch 2.x（容器内预装，启用 C++11 ABI）
+
+# 选择的 wheel（注意：cxx11abiTRUE）
+mmcv-2.1.0+cu12torch{对应版本}cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
+```
+
+### 故障排除
+
+#### 问题 1：导入错误 "undefined symbol"
+```
+ImportError: .../mmcv/_ext.cpython-312-x86_64-linux-gnu.so: undefined symbol: _ZN...
+```
+**原因**：C++11 ABI 不匹配  
+**解决方案**：
+- 如果您使用的是 `cxx11abiFALSE`，尝试 `cxx11abiTRUE` 版本
+- 反之亦然
+
+#### 问题 2：CUDA 版本不匹配
+```
+RuntimeError: CUDA version mismatch
+```
+**原因**：wheel 的 CUDA 版本与 PyTorch 的 CUDA 版本不匹配  
+**解决方案**：
+- 检查 PyTorch 的 CUDA 版本：`python -c "import torch; print(torch.version.cuda)"`
+- 下载对应 CUDA 版本的 wheel（cu11 或 cu12）
+
+#### 问题 3：找不到合适的 wheel
+**解决方案**：
+- 查看 [所有 Releases](https://github.com/biubushy/mmcv-wheels/releases) 找到对应版本
+- 如果没有您需要的版本组合，请提交 [Issue](https://github.com/biubushy/mmcv-wheels/issues)
+- 或者参考官方 [MMCV 安装文档](https://mmcv.readthedocs.io/en/latest/get_started/installation.html)从源码编译
+
+### 触发构建（维护者）
 
 1. 确定要构建的 MMCV 版本（如 `2.1.0`）
 2. 创建并推送对应的 git 标签：
@@ -133,25 +284,6 @@ git push origin v2.1.0
    - 创建 Release
    - 构建所有配置的 wheels
    - 上传 wheels 到 Release
-
-### 下载 Wheels
-
-从 GitHub Releases 页面下载对应配置的 wheel 文件，然后安装：
-
-```bash
-pip install mmcv-{version}+cu{cuda}torch{torch}cxx11abi{abi}-{platform}.whl
-```
-
-### 选择正确的 Wheel
-
-根据你的环境选择 wheel：
-
-1. **Python 版本**：匹配你的 Python 版本（3.9/3.10/3.11/3.12）
-2. **CUDA 版本**：匹配你的 CUDA 安装（11.8 或 12.x）
-3. **PyTorch 版本**：匹配你安装的 PyTorch 版本
-4. **C++11 ABI**：
-   - `FALSE`：用于标准 PyTorch wheels（推荐）
-   - `TRUE`：用于 NVIDIA NGC 容器或从源码编译的 PyTorch
 
 ## 技术细节
 

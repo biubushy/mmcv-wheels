@@ -119,7 +119,158 @@ Checks for existence of NVIDIA NGC PyTorch images from the last 7 months:
 
 ## Usage
 
-### Trigger Build
+### Quick Installation Guide
+
+#### Step 1: Check Your Environment
+
+Before installation, verify your environment configuration:
+
+```bash
+# Check Python version
+python --version
+# Example output: Python 3.12.0
+
+# Check PyTorch and CUDA versions
+python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.version.cuda}')"
+# Example output:
+# PyTorch: 2.6.0+cu126
+# CUDA: 12.6
+
+# Check C++11 ABI setting (if PyTorch is already installed)
+python -c "import torch; print(f'C++11 ABI: {torch._C._GLIBCXX_USE_CXX11_ABI}')"
+# Example output: C++11 ABI: False
+```
+
+#### Step 2: Select the Correct Wheel File
+
+Visit the [Releases page](https://github.com/biubushy/mmcv-wheels/releases) and choose the wheel file matching your environment.
+
+**Wheel File Naming Convention**:
+```
+mmcv-{version}+cu{cuda_ver}torch{torch_ver}cxx11abi{abi}-cp{py_ver}-cp{py_ver}-linux_x86_64.whl
+```
+
+**Example Filename Breakdown**:
+```
+mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+│         │  │  │         │            │    │
+│         │  │  │         │            │    └─ Python 3.12
+│         │  │  │         │            └────── Python 3.12
+│         │  │  │         └─────────────────── C++11 ABI disabled
+│         │  │  └───────────────────────────── PyTorch 2.6.0
+│         │  └──────────────────────────────── CUDA 12.x
+│         └─────────────────────────────────── MMCV version 2.1.0
+└───────────────────────────────────────────── Package name
+```
+
+**Selection Criteria**:
+
+1. **Python Version Match**
+   - `cp39` → Python 3.9
+   - `cp310` → Python 3.10
+   - `cp311` → Python 3.11
+   - `cp312` → Python 3.12
+
+2. **CUDA Version Match**
+   - If your CUDA is 11.x (11.0-11.8), choose files starting with `cu11`
+   - If your CUDA is 12.x (12.0-12.9), choose files starting with `cu12`
+   - **Tip**: PyTorch's CUDA version notation (e.g., `cu126`) indicates CUDA 12.6
+
+3. **PyTorch Version Match**
+   - Choose files matching your PyTorch **major and minor version**
+   - Example: PyTorch 2.6.0 and 2.6.1 both use `torch2.6.0` files
+   - Supported versions: 2.4.0, 2.5.1, 2.6.0, 2.7.1
+
+4. **C++11 ABI Match**
+   - **Most common case**: Choose `cxx11abiFALSE` (for standard PyTorch installed via pip)
+   - **Special cases only**: Choose `cxx11abiTRUE` if:
+     - Using NVIDIA NGC PyTorch containers
+     - Using PyTorch compiled from source with C++11 ABI enabled
+   - **How to verify**: Run the check command above; if output is `False`, use `cxx11abiFALSE`
+
+#### Step 3: Download and Install
+
+**Complete Example (Environment: Python 3.12 + PyTorch 2.6.0 + CUDA 12.6)**:
+
+```bash
+# 1. Download wheel file
+wget https://github.com/biubushy/mmcv-wheels/releases/download/v2.1.0/mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+
+# 2. Install (using full filename)
+pip install mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+
+# 3. Verify installation
+python -c "import mmcv; print(mmcv.__version__)"
+```
+
+**Or install directly from URL**:
+
+```bash
+pip install https://github.com/biubushy/mmcv-wheels/releases/download/v2.1.0/mmcv-2.1.0+cu12torch2.6.0cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+```
+
+### Common Environment Examples
+
+#### Example 1: Standard PyTorch Environment
+```bash
+# Environment info
+Python 3.11.0
+PyTorch 2.5.1+cu118 (installed via pip)
+CUDA 11.8
+
+# Selected wheel
+mmcv-2.1.0+cu11torch2.5.1cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
+```
+
+#### Example 2: Newer CUDA Environment
+```bash
+# Environment info
+Python 3.12.0
+PyTorch 2.7.1+cu128 (installed via pip)
+CUDA 12.8
+
+# Selected wheel
+mmcv-2.1.0+cu12torch2.7.1cxx11abiFALSE-cp312-cp312-linux_x86_64.whl
+```
+
+#### Example 3: NVIDIA NGC Container
+```bash
+# Environment info
+Docker container: nvcr.io/nvidia/pytorch:24.10-py3
+Python 3.10 (in container)
+PyTorch 2.x (pre-installed in container with C++11 ABI enabled)
+
+# Selected wheel (note: cxx11abiTRUE)
+mmcv-2.1.0+cu12torch{matching_version}cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
+```
+
+### Troubleshooting
+
+#### Issue 1: Import Error "undefined symbol"
+```
+ImportError: .../mmcv/_ext.cpython-312-x86_64-linux-gnu.so: undefined symbol: _ZN...
+```
+**Cause**: C++11 ABI mismatch  
+**Solution**:
+- If you're using `cxx11abiFALSE`, try the `cxx11abiTRUE` version
+- Vice versa
+
+#### Issue 2: CUDA Version Mismatch
+```
+RuntimeError: CUDA version mismatch
+```
+**Cause**: Wheel's CUDA version doesn't match PyTorch's CUDA version  
+**Solution**:
+- Check PyTorch's CUDA version: `python -c "import torch; print(torch.version.cuda)"`
+- Download the matching CUDA version wheel (cu11 or cu12)
+
+#### Issue 3: Cannot Find Suitable Wheel
+**Solutions**:
+- Check [all Releases](https://github.com/biubushy/mmcv-wheels/releases) for the matching version
+- If your version combination is not available, submit an [Issue](https://github.com/biubushy/mmcv-wheels/issues)
+- Or refer to the official [MMCV installation guide](https://mmcv.readthedocs.io/en/latest/get_started/installation.html) to compile from source
+
+### Trigger Build (For Maintainers)
 
 1. Determine the MMCV version to build (e.g., `2.1.0`)
 2. Create and push the corresponding git tag:
@@ -133,25 +284,6 @@ git push origin v2.1.0
    - Create a Release
    - Build wheels for all configurations
    - Upload wheels to Release
-
-### Download Wheels
-
-Download the wheel file for your configuration from the GitHub Releases page, then install:
-
-```bash
-pip install mmcv-{version}+cu{cuda}torch{torch}cxx11abi{abi}-{platform}.whl
-```
-
-### Select the Right Wheel
-
-Choose the wheel based on your environment:
-
-1. **Python Version**: Match your Python version (3.9/3.10/3.11/3.12)
-2. **CUDA Version**: Match your CUDA installation (11.8 or 12.x)
-3. **PyTorch Version**: Match your installed PyTorch version
-4. **C++11 ABI**:
-   - `FALSE`: For standard PyTorch wheels (recommended)
-   - `TRUE`: For NVIDIA NGC containers or PyTorch compiled from source
 
 ## Technical Details
 
